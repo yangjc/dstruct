@@ -1,0 +1,14 @@
+{
+    "name": "@yjc/dstruct",
+    "version": "2.0.3",
+    "description": "Describable data structures.",
+    "devDependencies": {
+        "@types/node": "^4.0.35"
+    },
+    "peerDependencies": {
+        "typescript": "^2.6.2"
+    },
+    "scripts": {
+        "build": "tsc"
+    }
+}
