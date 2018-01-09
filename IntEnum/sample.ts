@@ -7,22 +7,16 @@
 
 import { IntEnum } from '@yjc/dstruct/IntEnum';
 
-class Names {
-    readonly head: 'head' = 'head';
-    readonly body: 'body' = 'body';
-    readonly 't-t': 't-t' = 't-t';
-}
+export declare type Sample = 'head' | 'body' | 't-t';
 
-export declare type Name = keyof Names;
-
-export const sample = new IntEnum<Name>(10, new Names(), {
+export const sample = new IntEnum<Sample>(10, {
     'head': 0,
     'body': 1,
     't-t': 2,
 });
 
 module.parent === null && (function () {
-    let n: Name = 't-t';
+    let n: Sample = 't-t';
     console.log(n, sample.getValue(n), sample.getName(1));
     console.log(sample.names.head, sample.values.head);
 })();

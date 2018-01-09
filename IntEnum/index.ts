@@ -9,7 +9,7 @@ export declare type EnumValues<T extends string> = {
 };
 
 export declare type EnumNames<T extends string> = {
-    [K in T]: K;
+    [K in T]?: K;
 };
 
 type Indexes<T extends string> = {
@@ -19,23 +19,17 @@ type Indexes<T extends string> = {
 export class IntEnum<T extends string> {
 
     readonly    max         : number;
-    readonly    names       : EnumNames<T>;
+    readonly    names       : EnumNames<T> = {};
     readonly    values      : EnumValues<T>;
 
     private     indexes     : Indexes<T> = {};
 
-    constructor(maxValue: number, names: EnumNames<T>, values: EnumValues<T>) {
+    constructor(maxValue: number, values: EnumValues<T>) {
         this.max = maxValue;
-        this.names = names;
         this.values = values;
 
         for (let name in values) {
-            if (name !== names[name]) {
-                throw new Error(`name list error: ${name}=${names[name]}`);
-            }
-        }
-
-        for (let name in values) {
+            this.names[name] = name;
             let v: number = values[name];
             if (!Number.isInteger(v) || v < 0) {
                 throw new RangeError(`value of name should be zero or positive integer`);

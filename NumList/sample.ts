@@ -13,7 +13,7 @@ interface SampleD<T = boolean> {
     orz: T;
 }
 
-export declare type Desc = Description<SampleD>;
+export declare type Sample = Description<SampleD>;
 
 export const sample = new NumList<SampleD, SampleD<Property>>(80, {
     a: {position: 0, defaultValue: 11, },
@@ -22,7 +22,7 @@ export const sample = new NumList<SampleD, SampleD<Property>>(80, {
 });
 
 module.parent === null && (function () {
-    let d0: Desc = {
+    let d0: Sample = {
         orz: 233,
     };
     console.log(sample.maxPosition, sample.valueLength, sample.defaultDesc);

@@ -1,87 +1,47 @@
 /**
- * YJC <yangjiecong@live.com> @2017-11-20
+ * YJC <yangjiecong@live.com> @2018-01-09
  */
-
 
 'use strict';
 
-import { initStructData, StructData, Data, StructFieldMap, MappedFields } from '@yjc/dstruct/StructData';
+import { DescData, Descriptor, StructData, getDescriptor } from '@yjc/dstruct/StructData';
 
-import { sample as sampleIE, Name as IESName } from '../IntEnum/sample';
-import { sample as sampleBI, Desc as BISDesc } from '../BitsInt/sample';
+import { Sample as BI, sample as sampleBI } from '../BitsInt/Sample';
 
-interface SampleD<BI = BISDesc, IE = IESName> {
-    id  : string;
-    bi  : BI;
-    ie  : IE;
+export interface D {
+    itemId: number;
+    status: BI;
 }
 
-type SampleV = SampleD<number, number>;
+export type Sample = DescData<D>;
 
-export declare type Desc = Data<SampleD>;
-export declare type Value = Data<SampleV>;
+export const statusDescriptor: Descriptor<BI> = {
+    getDefault: (): BI => sampleBI.getDefaultDesc(),
+    getValue: (desc: BI): number => sampleBI.getValue(desc),
+    parseValue: (value: number): BI => sampleBI.parseValue(value),
+    getDesc: (desc: BI): BI => sampleBI.getDesc(desc),
+};
 
-export declare type Field = 'id_' | 'bi_' | 'ie_';
-export declare type Fields = MappedFields<keyof SampleD, Field>;
-
-@initStructData<SampleD, SampleV>({
-
-    bi: {
-        default: (): BISDesc => sampleBI.getDefaultDesc(),
-
-        get: (data: BISDesc): BISDesc => data,
-
-        set: (data: BISDesc, desc: BISDesc): BISDesc => sampleBI.getDesc(desc, data),
-
-        getValue: (data: BISDesc): number => sampleBI.getValue(data),
-
-        setValue: (data: BISDesc, value: number): BISDesc => sampleBI.parseValue(value, data),
-    },
-
-    ie: {
-        default: (): IESName => sampleIE.names.head,
-
-        get: (data: IESName): IESName => data,
-
-        set: (data: IESName, name: IESName): IESName => name,
-
-        getValue: (data: IESName): number => sampleIE.getValue(data),
-
-        setValue: (data: IESName, value: number): IESName => sampleIE.getName(value),
-    },
-})
-export class Sample extends StructData<SampleD, SampleV> {}
-
-export const sampleMapped = new StructFieldMap<Field, SampleD, SampleV>({
-    id: "id_",
-    bi: "bi_",
-    ie: "ie_",
-}, '_', Sample);
+export const structure: StructData<D> = new StructData<D>({
+    itemId: getDescriptor('item_id'),
+    status: getDescriptor('status', statusDescriptor)
+});
 
 module.parent === null && (function () {
-    let x: Sample = new Sample({
-        id: '#'
-    });
-    x.data.ie = 't-t';
-    x.data.bi = {
-        one: true
+    const d: Sample = {
+        itemId: 2,
+        status: {
+            one: true,
+            other: true
+        }
     };
-    let b0: BISDesc = x.data.bi;
-    console.log(x.data.bi);
-    x.data.bi = {
-        two: false
-    };
-    console.log(x.data.bi, x.data.bi === b0);
-    console.log(x.data, x.getData(), x.getValue(), x.getValue().bi.toString(2));
-    x.setValue({
-        ie: 1
-    });
-    console.log(x.data.ie, x.getData());
-
-    console.log(sampleMapped.queryData({
-        'id_': '#id',
-        'ie_': 0,
-        'bi_': 255
-    }).getData());
-    console.log(sampleMapped.mapData(x));
+    console.log('default status', structure.defaults.status);
+    console.log('input', d);
+    console.log('input desc', structure.getDescData(d));
+    console.log('output desc', structure.queryData({
+        item_id: d.itemId,
+        status: statusDescriptor.getValue(d.status)
+    }));
+    console.log('output value', structure.mapData(d));
+    console.log('status value', structure.valueGetters.status(d.status));
 })();

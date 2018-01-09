@@ -1,196 +1,168 @@
 /**
- * YJC <yangjiecong@live.com> @2017-10-18
- */
-
-/*
- * description (D): 描述性数据，用于开发过程
- * value (V): 可存储数据，用于数据传输、入库
+ * YJC <yangjiecong@live.com> @2018-01-09
  */
 
 'use strict';
 
-import { StructFieldMap } from './FieldMap';
-export { StructFieldMap };
+/*
+ * desc (description): 描述性数据，用于开发过程。
+ * value: 可存储数据，用于数据传输、入库。
+ */
 
-export declare type Data<T> = {
+export type DescData<T> = {
     [K in keyof T]? : T[K];
 };
 
-export declare type SameKeysObject<O> = {
-    [K in keyof O]: any;
+export type ValueData<T> = {
+    [K in keyof T]? : any;
 };
 
-export declare type FieldsData<T extends string> = {
-    [K in T]?: any;
-};
+export interface Descriptor<D> {
+    field?: string;
 
-export declare interface Descriptor<D, V> {
-    default     : () => D,
-    get         : (currentData: D) => D,
-    set         : (currentData: D, newData: D) => D,
-    getValue    : (currentData: D) => V,
-    setValue    : (currentData: D, newData: V) => D,
+    getDefault?: () => D;
+    getValue?: (desc: D) => any;
+    parseValue?: (value: any) => D;
+    getDesc?: (desc: D) => D;
 }
 
-export declare type Descriptors<D, V extends SameKeysObject<D>> = {
-    [K in keyof D]? : Descriptor<D[K], V[K]>;
+type Descriptors<D> = {
+    [K in keyof D]: Descriptor<D[K]>;
 };
 
-export declare type MappedFields<X extends string, Y extends string> = {
-    [K in X]: Y;
+type Keys<D> = {
+    [K in keyof D]?: K;
 };
 
+type Fields<D> = {
+    [K in keyof D]?: string;
+};
 
-interface InnerDescriptor<D, ND> {
-    default?    : () => D,
-    get         : (currentData: D) => ND,
-    set         : (currentData: D, newData: ND) => D,
+interface FieldKeyMap {
+    [field: string]: string;
 }
 
-type InnerDescriptors<D, ND extends SameKeysObject<D>> = {
-    [K in keyof D]? : InnerDescriptor<D[K], ND[K]>;
+type ValueGetters<D> = {
+    [K in keyof D]?: (desc: D[K]) => any;
 };
 
+type ValueParsers<D> = {
+    [K in keyof D]?: (value: any) => D[K];
+};
 
-export function initStructData<D, V extends SameKeysObject<D>>
-(descriptors?: Descriptors<D, V>) {
+type DescGetters<D> = {
+    [K in keyof D]?: (desc: D[K]) => D[K];
+};
 
-    const valueDescriptors = descriptors
-        ? (function () {
-            let _setter: any = {};
-            let valueDescriptors: any = {};
+type Defaults<D> = {
+    [K in keyof D]?: D[K];
+};
 
-            for (let name in descriptors) {
-                valueDescriptors[name] = {
-                    default: descriptors[name].default,
-                    get: descriptors[name].getValue,
-                    set: descriptors[name].setValue,
-                };
-                _setter[name] = {
-                    get: descriptors[name].get,
-                    set: descriptors[name].set,
-                };
-            }
+const getter = (input: any): any => input;
 
-            descriptors = _setter;
-
-            return valueDescriptors;
-
-        })()
-
-        : null;
-
-    type TStructData = StructData<D, V>;
-
-    return function classDecorator<T extends {new(...args: any[]): TStructData}>(Ctor: T) {
-
-        return class StructData extends Ctor {
-
-            constructor(...args: any[]) {
-                super(...args);
-                descriptors && this.init(descriptors, valueDescriptors);
-                args[0] && this.setData(args[0]);
-            }
-
-        };
-
-    };
-
+export function getDescriptor(fieldName: string, descriptor?: Descriptor<any>): Descriptor<any> {
+    return Object.assign({field: fieldName}, descriptor);
 }
 
-export class StructData<D, V extends SameKeysObject<D>> {
+export class StructData<D> {
 
-    public      data    : Data<D> = {}; // D
+    readonly keys: Keys<D> = {};
+    readonly fields: Fields<D> = {};
+    readonly valueGetters: ValueGetters<D> = {};
+    readonly valueParsers: ValueParsers<D> = {};
+    readonly descGetters: DescGetters<D> = {};
+    readonly defaults: Defaults<D> = {};
+    readonly name: string;
 
-    private     _data   : any;
-    private     descriptors  : any;
+    private fieldKeyMap: FieldKeyMap = {};
 
-    constructor(data? : Data<D>) {}
+    constructor(descriptors: Descriptors<D>, name?: string) {
+        for (let key in descriptors) {
+            const descriptor = descriptors[key];
 
-    private getGetter(name: string, getter: Function): () => any {
-        return (): any => {
-            return this._data.hasOwnProperty(name)
-                ? getter(this._data[name])
-                : undefined;
-        };
-    }
+            this.keys[key] = key;
+            this.fields[key] = descriptor.field || key;
+            this.fieldKeyMap[descriptor.field || key] = key;
 
-    private getSetter(name: string, descriptors: Function): (d: any) => void {
-        return (data: any): void => {
-            this._data[name] = descriptors(
-                this._data.hasOwnProperty(name) ? this._data[name] : this.descriptors[name].default(),
-                data
-            );
-        };
-    }
+            this.valueGetters[key] = descriptor.getValue || getter;
+            this.valueParsers[key] = descriptor.parseValue || getter;
+            this.descGetters[key] = descriptor.getDesc || getter;
 
-    protected init(descriptors: InnerDescriptors<D, D>, valueDescriptors: InnerDescriptors<D, V>) {
-        this._data = {};
-        this.descriptors = valueDescriptors;
-
-        for (let name in descriptors) {
-            Object.defineProperty(this.data, name, {
-                configurable: false,
-                enumerable: true,
-                get: this.getGetter(name, descriptors[name].get),
-                set: this.getSetter(name, descriptors[name].set),
+            descriptor.getDefault && Object.defineProperty(this.defaults, key, {
+                get: descriptor.getDefault
             });
+
+            name && (this.name = name);
         }
     }
 
-    public setData(data: Data<D>): void {
-        for (let name in data) {
-            this.data[name] = data[name];
-        }
-    }
-
-    public getData(): Data<D> {
-        let d: Data<D> = {};
-        for (let name in this.data) {
-            let v: any = this.data[name];
-            if (v !== undefined) {
-                d[<keyof D>name] = v;
+    public getDescData(data: DescData<D>): DescData<D> {
+        const d: DescData<D> = {};
+        for (let key in data) {
+            if (!this.keys.hasOwnProperty(key)) {
+                throw new Error(`undefined key "${key}"`);
             }
+            d[key] = this.descGetters[key](data[key]);
         }
         return d;
     }
 
-    public setValue(data: Data<V>): void {
-        for (let name in data) {
-            if (this.descriptors && this.descriptors.hasOwnProperty(name)) {
-                this._data[name] = this.descriptors[name].set(
-                    this._data.hasOwnProperty(name) ? this._data[name] : this.descriptors[name].default(),
-                    data[name]
-                );
-            } else {
-                this.data[<keyof D>name] = data[name];
+    public getValueData(data: DescData<D>): ValueData<D> {
+        const d: ValueData<D> = {};
+        for (let key in data) {
+            if (!this.keys.hasOwnProperty(key)) {
+                throw new Error(`undefined key "${key}"`);
+            }
+            d[key] = this.valueGetters[key](data[key]);
+        }
+        return d;
+    }
+
+    public parseValueData(data: ValueData<D>): DescData<D> {
+        const d: DescData<D> = {};
+        for (let key in data) {
+            if (!this.keys.hasOwnProperty(key)) {
+                throw new Error(`undefined key "${key}"`);
+            }
+            d[key] = this.valueParsers[key](data[key]);
+        }
+        return d;
+    }
+
+    public queryData(data: any): DescData<D> {
+        const d: DescData<D> = {};
+        for (let field in data) {
+            const key = <keyof D>this.fieldKeyMap[field];
+            if (key === undefined) {
+                throw new Error(`undefined field "${field}"`);
+            }
+            d[key] = this.valueParsers[key](data[field]);
+        }
+        return d;
+    }
+
+    public queryOneFromList(data: any[], index: number = 0): DescData<D> {
+        return data[index]
+            ? this.queryData(data[index])
+            : null;
+    }
+
+    public queryDataList(data: any[]): DescData<D>[] {
+        return data.map(item => this.queryData(item));
+    }
+
+    public mapData(data: DescData<D>, keys?: (keyof D)[]): any {
+        const d: any = {};
+        for (let key in data) {
+            const field: string = this.fields[key];
+            if (field === undefined) {
+                throw new Error(`not mapped key "${key}"`);
+            }
+            if (!keys || keys.indexOf(key) > -1) {
+                d[field] = this.valueGetters[key](data[key]);
             }
         }
-    }
-
-    public getValueOf(name: keyof D): any {
-        return this.descriptors && this.descriptors.hasOwnProperty(name)
-            ? (this._data.hasOwnProperty(name)
-                ? this.descriptors[name].get(this._data[name])
-                : undefined)
-            : this.data[name];
-    }
-
-    public getValue(): Data<V> {
-        let value: any = {};
-        for (let name in this.data) {
-            let v: any = this.getValueOf(<keyof D>name);
-            if (v !== undefined) {
-                value[name] = v;
-            }
-        }
-        return value;
-    }
-
-    public has(name: keyof D): boolean {
-        return this.descriptors && this.descriptors.hasOwnProperty(name)
-            ? this._data.hasOwnProperty(name)
-            : this.data.hasOwnProperty(name);
+        return d;
     }
 
 }

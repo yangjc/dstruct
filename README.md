@@ -2,4 +2,4 @@
 
 Describable data structures.
 
-Check sample files in each directory for usage.
+Check `Sample` files in each directory for usage.

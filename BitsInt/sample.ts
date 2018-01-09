@@ -13,7 +13,7 @@ interface SampleD<T = boolean> {
     other: T;
 }
 
-export declare type Desc = Description<SampleD>;
+export declare type Sample = Description<SampleD>;
 
 export const sample = new BitsInt<SampleD, SampleD<Property>>(8, {
     one: {bitPosition: 0, defaultValue: false, },
@@ -22,7 +22,7 @@ export const sample = new BitsInt<SampleD, SampleD<Property>>(8, {
 });
 
 module.parent === null && (function () {
-    let d0: Desc = {
+    let d0: Sample = {
         two: false,
         other: true,
     };
