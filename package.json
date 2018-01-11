@@ -1,6 +1,6 @@
 {
   "name": "@yjc/dstruct",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "Describable data structures.",
   "devDependencies": {
     "@types/node": "^8.5.7"

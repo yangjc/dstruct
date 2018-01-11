@@ -17,7 +17,7 @@ export type ValueData<T> = {
     [K in keyof T]? : any;
 };
 
-export interface Descriptor<D> {
+interface DescriptorDef<D> {
     field?: string;
 
     getDefault?: () => D;
@@ -27,7 +27,7 @@ export interface Descriptor<D> {
 }
 
 type Descriptors<D> = {
-    [K in keyof D]: Descriptor<D[K]>;
+    [K in keyof D]: DescriptorDef<D[K]> | string;
 };
 
 type Keys<D> = {
@@ -60,8 +60,47 @@ type Defaults<D> = {
 
 const getter = (input: any): any => input;
 
-export function getDescriptor(fieldName: string, descriptor?: Descriptor<any>): Descriptor<any> {
-    return Object.assign({field: fieldName}, descriptor);
+export class Descriptor<D> implements DescriptorDef<D> {
+
+    readonly field?: string;
+
+    readonly getDefault?: () => D;
+    readonly getValue?: (desc: D) => any;
+    readonly parseValue?: (value: any) => D;
+    readonly getDesc?: (desc: D) => D;
+
+    constructor(definition?: DescriptorDef<D>) {
+        if (definition) {
+            typeof definition.field === 'string' && (this.field = definition.field);
+
+            definition.getDefault && (this.getDefault = definition.getDefault);
+            definition.getValue && (this.getValue = definition.getValue);
+            definition.parseValue && (this.parseValue = definition.parseValue);
+            definition.getDesc && (this.getDesc = definition.getDesc);
+        }
+    }
+
+    private getDefinition(): DescriptorDef<D> {
+        const d: DescriptorDef<D> = {};
+        typeof this.field === 'string' && (d.field = this.field);
+        this.getDefault && (d.getDefault = this.getDefault);
+        this.getValue && (d.getValue = this.getValue);
+        this.parseValue && (d.parseValue = this.parseValue);
+        this.getDesc && (d.getDesc = this.getDesc);
+        return d;
+    }
+
+    public def(): DescriptorDef<D>
+    public def(fieldName: string): DescriptorDef<D>
+    public def(definition: DescriptorDef<D>): DescriptorDef<D>
+    public def(fieldOrDefinition?: string | DescriptorDef<D>): DescriptorDef<D> {
+        if (typeof fieldOrDefinition === 'string') {
+            fieldOrDefinition = {field: fieldOrDefinition};
+        }
+
+        return Object.assign(this.getDefinition(), fieldOrDefinition);
+    }
+
 }
 
 export class StructData<D> {
@@ -78,7 +117,9 @@ export class StructData<D> {
 
     constructor(descriptors: Descriptors<D>, name?: string) {
         for (let key in descriptors) {
-            const descriptor = descriptors[key];
+            const descriptor: DescriptorDef<any> = typeof descriptors[key] === 'string'
+                ? {field: <string>descriptors[key]}
+                : (<DescriptorDef<any>>descriptors[key] || {});
 
             this.keys[key] = key;
             this.fields[key] = descriptor.field || key;
